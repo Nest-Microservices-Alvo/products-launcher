@@ -1,5 +1,7 @@
 services:
+  #================================================================================================
   # Client Gateway Service
+  #================================================================================================
   client-gateway:
     build: ./client-gateway
     ports:
@@ -18,13 +20,17 @@ services:
       - PORT=3000
       - NATS_SERVERS=nats://nast-server:4222
 
+  #================================================================================================
   # NATS Server
+  #================================================================================================
   nast-server:
     image: nats:latest
     ports:
       - "8222:8222"
 
+  #================================================================================================
   # Products Microservice
+  #================================================================================================
   products-ms:
     build: ./products-ms
     develop:
@@ -42,7 +48,9 @@ services:
       - NATS_SERVERS=nats://nast-server:4222
       - DATABASE_URL=file:./dev.db
 
+  #================================================================================================
   # Orders Microservice
+  #================================================================================================
   orders-ms:
     depends_on:
       - orders-db
@@ -62,7 +70,9 @@ services:
       - NATS_SERVERS=nats://nast-server:4222
       - DATABASE_URL=postgresql://postgres:123456@orders-db:5432/ordersdb?schema=public
 
+  #================================================================================================
   # Orders Database
+  #================================================================================================
   orders-db:
     container_name: orders_database
     image: postgres:16.2
@@ -75,3 +85,29 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=123456
       - POSTGRES_DB=ordersdb
+
+  #================================================================================================
+  # Payment Microservice
+  #================================================================================================
+  payments-ms:
+    container_name: payments-ms
+    build: ./payments-ms
+    develop:
+      watch:
+        - action: sync
+          path: ./payments-ms/src
+          target: /usr/src/app/src
+          ignore:
+            - node_modules
+      # volumes:
+      #   - ./client-gateway/src:/usr/src/app/src
+    command: npm run start:dev
+    ports:
+      - ${PAYMENTS_MS_PORT}:${PAYMENTS_MS_PORT}
+    environment:
+      - PORT=${PAYMENTS_MS_PORT}
+      - NATS_SERVERS=nats://nast-server:4222
+      - STRIPE_SECRET=${STRIPE_SECRET}
+      - STRIPE_SUCCESS_URL=${STRIPE_SUCCESS_URL}
+      - STRIPE_CANCEL_URL=${STRIPE_CANCEL_URL}
+      - STRIPE_ENDPOINT_SECRET=${STRIPE_ENDPOINT_SECRET}
